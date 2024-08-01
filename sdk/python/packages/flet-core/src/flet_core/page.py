@@ -1247,6 +1247,10 @@ class Page(AdaptiveControl):
             url, web_window_name, web_popup_window, window_width, window_height
         )
 
+    def android_get_jnienv(self):
+        data = self._invoke_method("androidGetJNIEnv", wait_for_result=True)
+        return int(data) if data else None
+
     def can_launch_url(self, url: str) -> bool:
         args = {"url": url}
         return self._invoke_method("canLaunchUrl", args, wait_for_result=True) == "true"
