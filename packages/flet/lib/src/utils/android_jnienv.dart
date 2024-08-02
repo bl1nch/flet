@@ -11,5 +11,6 @@ Future<int> androidGetJNIEnv() async {
     return result;
   } catch (e) {
     debugPrint('Error calling native androidGetJNIEnv: $e');
+    return 0;
   }
 }
