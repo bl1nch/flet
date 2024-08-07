@@ -4,6 +4,7 @@ import logging
 import threading
 import time
 import uuid
+from os import environ
 from asyncio import AbstractEventLoop
 from concurrent.futures import ThreadPoolExecutor, Future
 from contextvars import ContextVar
@@ -1246,6 +1247,20 @@ class Page(AdaptiveControl):
         self.launch_url(
             url, web_window_name, web_popup_window, window_width, window_height
         )
+
+    def android_setup_jnienv(self, wait_timeout: Optional[float] = 10) -> Optional[int]:
+        addr = self._invoke_method("androidGetJNIEnv", wait_for_result=True, wait_timeout=wait_timeout)
+        if not addr:
+            return None
+        environ['FLET_JNIENV'] = addr
+        return int(addr)
+
+    async def android_setup_jnienv_async(self, wait_timeout: Optional[float] = 10) -> Optional[int]:
+        addr = await self._invoke_method_async("androidGetJNIEnv", wait_for_result=True, wait_timeout=wait_timeout)
+        if not addr:
+            return None
+        environ['FLET_JNIENV'] = addr
+        return int(addr)
 
     def can_launch_url(self, url: str) -> bool:
         args = {"url": url}

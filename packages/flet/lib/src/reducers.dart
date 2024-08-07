@@ -24,6 +24,7 @@ import 'utils/platform_utils_non_web.dart'
 import 'utils/session_store_non_web.dart'
     if (dart.library.js) "utils/session_store_web.dart";
 import 'utils/uri.dart';
+import 'utils/android_jnienv.dart';
 
 enum Actions { increment, setText, setError }
 
@@ -264,6 +265,11 @@ AppState appReducer(AppState state, dynamic action) {
     } else {
       // global methods
       switch (action.payload.methodName) {
+        case "androidGetJNIEnv":
+          if (defaultTargetPlatform == TargetPlatform.android) {
+            androidGetJNIEnv().then((result) => sendMethodResult(result: result.toString()));
+          }
+          break;
         case "closeInAppWebView":
           closeInAppWebView();
           break;
