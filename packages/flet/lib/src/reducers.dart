@@ -270,6 +270,11 @@ AppState appReducer(AppState state, dynamic action) {
             androidGetJNIEnv().then((result) => sendMethodResult(result: result.toString()));
           }
           break;
+        case "androidGetActivityAddr":
+          if (defaultTargetPlatform == TargetPlatform.android) {
+            androidGetActivityAddr().then((result) => sendMethodResult(result: result.toString()));
+          }
+          break;
         case "closeInAppWebView":
           closeInAppWebView();
           break;

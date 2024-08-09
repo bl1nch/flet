@@ -1248,6 +1248,26 @@ class Page(AdaptiveControl):
             url, web_window_name, web_popup_window, window_width, window_height
         )
 
+    def android_get_activity_addr(self, wait_timeout: Optional[float] = 10) -> Optional[int]:
+        addr = self._invoke_method(
+            "androidGetActivityAddr",
+            wait_for_result=True,
+            wait_timeout=wait_timeout
+        )
+        if not addr:
+            return None
+        return int(addr)
+
+    async def android_get_activity_addr_async(self, wait_timeout: Optional[float] = 10) -> Optional[int]:
+        addr = await self._invoke_method_async(
+            "androidGetActivityAddr",
+            wait_for_result=True,
+            wait_timeout=wait_timeout
+        )
+        if not addr:
+            return None
+        return int(addr)
+
     def android_setup_jnienv(self, wait_timeout: Optional[float] = 10) -> Optional[int]:
         addr = self._invoke_method("androidGetJNIEnv", wait_for_result=True, wait_timeout=wait_timeout)
         if not addr:

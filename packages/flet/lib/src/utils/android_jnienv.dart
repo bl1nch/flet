@@ -14,3 +14,14 @@ Future<int> androidGetJNIEnv() async {
     return 0;
   }
 }
+
+
+Future<int> androidGetActivityAddr() async {
+  try {
+    final int result = await nativeChannel.invokeMethod('androidGetActivityAddr');
+    return result;
+  } catch (e) {
+    debugPrint('Error calling native androidGetActivityAddr: $e');
+    return 0;
+  }
+}
