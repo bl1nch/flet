@@ -24,6 +24,7 @@ import 'utils/platform_utils_non_web.dart'
 import 'utils/session_store_non_web.dart'
     if (dart.library.js) "utils/session_store_web.dart";
 import 'utils/uri.dart';
+import 'utils.dart';
 
 enum Actions { increment, setText, setError }
 
@@ -251,15 +252,27 @@ AppState appReducer(AppState state, dynamic action) {
     }
 
     if (action.payload.controlId != "") {
-      // control-specific method
-      var handler =
-          action.server.controlInvokeMethods[action.payload.controlId];
-      debugPrint("Invoke method handler: $handler");
-      if (handler != null) {
-        handler(action.payload.methodName, action.payload.args)
+      if (action.payload.controlId == "platform"){
+        //
+        // platform method
+        //
+        callPlatformMethodWithResult(action.payload.methodName)
             .then((result) => sendMethodResult(result: result.toString()))
             .onError((error, stackTrace) =>
-                sendMethodResult(error: error.toString()));
+                  sendMethodResult(error: error.toString()));
+      } else {
+        //
+        // control-specific method
+        //
+        var handler =
+            action.server.controlInvokeMethods[action.payload.controlId];
+        debugPrint("Invoke method handler: $handler");
+        if (handler != null) {
+          handler(action.payload.methodName, action.payload.args)
+              .then((result) => sendMethodResult(result: result.toString()))
+              .onError((error, stackTrace) =>
+                  sendMethodResult(error: error.toString()));
+        }
       }
     } else {
       // global methods

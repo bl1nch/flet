@@ -1,10 +1,18 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'utils/platform.dart';
+
+const fletPlatformChannel = MethodChannel('fletPlatformChannel');
+
+Future<String?> callPlatformMethodWithResult(String methodName) async {
+  final String? result = await fletPlatformChannel.invokeMethod<String?>(methodName);
+  return result;
+}
 
 Future setupDesktop() async {
   if (isDesktopPlatform()) {

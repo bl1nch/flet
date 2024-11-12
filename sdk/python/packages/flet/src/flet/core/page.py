@@ -1399,6 +1399,32 @@ class Page(AdaptiveControl):
             return None
         return result
 
+    def invoke_platform_method(
+        self,
+        method_name: str,
+        wait_for_result: Optional[bool] = False,
+        wait_timeout: Optional[float] = 5,
+    ) -> Optional[str]:
+        return self._invoke_method(
+            method_name=method_name,
+            control_id="platform",
+            wait_for_result=wait_for_result,
+            wait_timeout=wait_timeout
+        )
+
+    async def invoke_platform_method_async(
+        self,
+        method_name: str,
+        wait_for_result: Optional[bool] = False,
+        wait_timeout: Optional[float] = 5,
+    ) -> Optional[str]:
+        return await self._invoke_method_async(
+            method_name=method_name,
+            control_id="platform",
+            wait_for_result=wait_for_result,
+            wait_timeout=wait_timeout
+        )
+
     def __on_invoke_method_result(self, e) -> None:
         d = json.loads(e.data)
         result = InvokeMethodResults(**d)
