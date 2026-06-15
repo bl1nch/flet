@@ -11,6 +11,26 @@ class WebViewControl extends StatelessWidget {
 
   const WebViewControl({super.key, required this.control});
 
+  Control focusWrap(Control control) {
+    return Focus(
+      onKey: (node, event) {
+        // Allow webview to handle cursor keys. Without this, the
+        // arrow keys seem to get "eaten" by Flutter and therefore
+        // never reach the webview.
+        // (https://github.com/flutter/flutter/issues/102505).
+        if ({
+          LogicalKeyboardKey.arrowLeft,
+          LogicalKeyboardKey.arrowRight,
+          LogicalKeyboardKey.arrowUp,
+          LogicalKeyboardKey.arrowDown
+        }.contains(event.logicalKey)) {
+          return KeyEventResult.skipRemainingHandlers;
+        }
+      },
+      child: control
+    )
+  }
+
   @override
   Widget build(BuildContext context) {
     debugPrint("WebViewControl build: ${control.id}");
@@ -19,7 +39,7 @@ class WebViewControl extends StatelessWidget {
     if (isWebPlatform()) {
       view = WebviewWeb(control: control);
     } else if (isMobilePlatform() || isMacOSDesktop()) {
-      view = WebviewMobileAndMac(control: control);
+      view = focusWrap(control: WebviewMobileAndMac(control: control));
     } else if (isWindowsDesktop() || isLinuxDesktop()) {
       view = const WebviewDesktop();
     }
