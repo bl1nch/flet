@@ -297,6 +297,7 @@ class _BootOverlayState extends State<_BootOverlay> {
         // overlay never navigates, so it doesn't need a Navigator; this keeps
         // theme/Directionality while leaving the URL untouched.
         child: MaterialApp(
+          showPerformanceOverlay: true,
           debugShowCheckedModeBanner: false,
           builder: (context, _) => resolveBootScreen(
             name: bootScreenName,
