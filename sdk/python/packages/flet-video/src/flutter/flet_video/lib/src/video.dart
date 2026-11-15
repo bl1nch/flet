@@ -47,9 +47,24 @@ class _VideoControlState extends State<VideoControl> with FletStoreMixin {
   PlaylistMode? _playlistMode;
   SubtitleTrack? _subtitleTrack;
 
+  /// Forgets what was applied to the player, so that [build] applies every
+  /// property again. Call it whenever the player's mpv instance is replaced.
+  void _resetAppliedProperties() {
+    _volume = null;
+    _pitch = null;
+    _playbackRate = null;
+    _shufflePlaylist = null;
+    _playlistMode = null;
+    _subtitleTrack = null;
+  }
+
   /// Snapshot of the last-known playlist, used to diff against incoming
   /// updates so single add/remove changes can be applied without a full reload.
   dynamic _playlist;
+
+  /// Serializes [_updatePlaylist] calls: replacing the mpv instance must not
+  /// overlap with another update.
+  Future<void> _playlistUpdateChain = Future.value();
 
   /// Deep equality used to compare playlist entries (lists of media maps).
   static const _playlistEquality = DeepCollectionEquality();
@@ -131,11 +146,81 @@ class _VideoControlState extends State<VideoControl> with FletStoreMixin {
       }
     }
 
+    // Read it now: the state of the player is reset by the reinitialization.
     final play =
         widget.control.getBool("autoplay", false)! || _player.state.playing;
+
+    // The playlist has been replaced (not just appended to / removed from):
+    // instead of letting the running mpv open the new media, start over with
+    // a brand new mpv instance.
+    if (await _reinitializePlayer(playlist, play)) {
+      return;
+    }
+
+    // Fallback, if the mpv instance cannot be replaced on this platform.
     await _player.open(
         Playlist(parseVideoMedias(playlist, widget.control.backend, [])!),
         play: play);
+  }
+
+  /// Runs [_updatePlaylist] after the previously requested updates.
+  Future<void> _enqueuePlaylistUpdate(dynamic playlist) {
+    final next = _playlistUpdateChain.then((_) async {
+      // Already applied by an earlier (queued) update, or no player anymore.
+      if (!_initialized || _playlistEquality.equals(playlist, _playlist)) {
+        return;
+      }
+      await _updatePlaylist(playlist);
+    });
+    // Keep the chain alive if an update fails; the error still reaches the caller.
+    _playlistUpdateChain = next.catchError((_) {});
+    return next;
+  }
+
+  /// Replaces the mpv instance of the current [_player] with a new one &
+  /// opens [playlist] in it, while the [Video] widget (& its controls) stay.
+  ///
+  /// Returns `false`, leaving the player untouched, if that is not supported on
+  /// this platform, so that the caller can fall back to a plain `open()`.
+  Future<bool> _reinitializePlayer(dynamic playlist, bool play) async {
+    final player = _player;
+    final control = widget.control;
+
+    try {
+      await player.reinitialize();
+    } on UnsupportedError catch (e) {
+      debugPrint("Video: cannot reinitialize the player ($e), reopening.");
+      return false;
+    } on UnimplementedError catch (e) {
+      debugPrint("Video: cannot reinitialize the player ($e), reopening.");
+      return false;
+    }
+
+    // The control has been disposed / swapped to another player meanwhile.
+    if (!_initialized || !identical(player, _player)) {
+      return true;
+    }
+
+    // The new mpv instance starts with default settings: forget what was
+    // applied to the old one, so that build() applies everything again.
+    _resetAppliedProperties();
+
+    _openFuture = () async {
+      await _applyMpvProperties(control);
+      if (!_initialized || !identical(player, _player)) return;
+      await player.open(
+          Playlist(parseVideoMedias(playlist, control.backend, [])!),
+          play: play);
+    }();
+
+    // Run build() again to re-apply volume, pitch, playback rate, shuffle,
+    // playlist mode & subtitle track (the latter waits for _openFuture).
+    if (mounted) {
+      setState(() {});
+    }
+
+    await _openFuture;
+    return true;
   }
 
   Future<void> _applyMpvProperties(Control control) async {
@@ -172,12 +257,7 @@ class _VideoControlState extends State<VideoControl> with FletStoreMixin {
 
     // The new player starts with default settings, so forget what was applied
     // to the previous one and let build() re-apply everything.
-    _volume = null;
-    _pitch = null;
-    _playbackRate = null;
-    _shufflePlaylist = null;
-    _playlistMode = null;
-    _subtitleTrack = null;
+    _resetAppliedProperties();
 
     final videoControllerConfiguration = parseControllerConfiguration(
         control.get("configuration"), const VideoControllerConfiguration())!;
@@ -426,7 +506,7 @@ class _VideoControlState extends State<VideoControl> with FletStoreMixin {
 
       // playlist
       if (!_playlistEquality.equals(playlist, _playlist)) {
-        await _updatePlaylist(playlist);
+        await _enqueuePlaylistUpdate(playlist);
       }
 
       // shufflePlaylist
